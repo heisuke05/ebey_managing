@@ -6,6 +6,14 @@ import { useRouter } from "next/navigation";
 import { Item, ItemStatus, STATUSES, priceLabel } from "@/lib/types";
 import { calcProfit } from "@/lib/profit";
 
+/** 桁数が多いほど小さいフォントを返す(カードからのはみ出し防止) */
+function fitText(s: string): string {
+  if (s.length > 11) return "text-xs";
+  if (s.length > 8) return "text-sm";
+  if (s.length > 6) return "text-base";
+  return "text-xl";
+}
+
 const STATUS_COLORS: Record<ItemStatus, string> = {
   在庫: "bg-slate-200 text-slate-700",
   出品中: "bg-sky-100 text-sky-700",
@@ -79,19 +87,21 @@ export default function OwnerPage() {
       </div>
 
       <div className="mt-4 grid grid-cols-3 gap-2 text-center">
-        <div className="rounded-xl bg-white p-3 shadow-sm">
+        <div className="flex min-w-0 flex-col justify-center rounded-xl bg-white p-3 shadow-sm">
           <p className="text-xs text-slate-400">在庫・出品中</p>
           <p className="text-xl font-bold">
             {items.filter((i) => i.status === "在庫" || i.status === "出品中").length}
           </p>
         </div>
-        <div className="rounded-xl bg-white p-3 shadow-sm">
+        <div className="flex min-w-0 flex-col justify-center rounded-xl bg-white p-3 shadow-sm">
           <p className="text-xs text-slate-400">想定利益合計</p>
-          <p className="text-xl font-bold text-green-600">
+          <p
+            className={`break-all font-bold leading-tight text-green-600 ${fitText(`¥${totalProfit.toLocaleString()}`)}`}
+          >
             ¥{totalProfit.toLocaleString()}
           </p>
         </div>
-        <div className="rounded-xl bg-white p-3 shadow-sm">
+        <div className="flex min-w-0 flex-col justify-center rounded-xl bg-white p-3 shadow-sm">
           <p className="text-xs text-slate-400">USD/JPY</p>
           <p className="text-xl font-bold">{rate.toFixed(1)}</p>
         </div>

@@ -241,6 +241,45 @@ export async function updateItem(
   return updated;
 }
 
+/** 指定タブの数値シートIDを取得(行削除に必要) */
+async function tabSheetId(title: string): Promise<number | null> {
+  const meta = await client().spreadsheets.get({ spreadsheetId: SHEET_ID });
+  const sheet = (meta.data.sheets ?? []).find(
+    (s) => s.properties?.title === title
+  );
+  return sheet?.properties?.sheetId ?? null;
+}
+
+/** 商品をシートから完全に削除する。削除した商品を返す(見つからなければnull) */
+export async function deleteItem(id: string): Promise<Item | null> {
+  const rows = await readTab(ITEMS_TAB);
+  const idx = rows.findIndex((r, i) => i > 0 && r[0] === id);
+  if (idx < 0) return null;
+  const item = rowToItem(rows[idx]);
+
+  const sheetId = await tabSheetId(ITEMS_TAB);
+  if (sheetId == null) return null;
+
+  await client().spreadsheets.batchUpdate({
+    spreadsheetId: SHEET_ID,
+    requestBody: {
+      requests: [
+        {
+          deleteDimension: {
+            range: {
+              sheetId,
+              dimension: "ROWS",
+              startIndex: idx, // 0起点(ヘッダー行が0なので実データ行と一致)
+              endIndex: idx + 1,
+            },
+          },
+        },
+      ],
+    },
+  });
+  return item;
+}
+
 // ---- プッシュ通知の購読情報 ----
 
 export interface StoredSubscription {

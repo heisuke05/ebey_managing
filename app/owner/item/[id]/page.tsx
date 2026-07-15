@@ -124,6 +124,34 @@ export default function ItemDetailPage({
     }
   }
 
+  async function deleteItem() {
+    if (!item) return;
+    if (
+      !confirm(
+        `「${item.name}」を削除しますか?\nこの操作は取り消せません。写真や記録もすべて消えます。`
+      )
+    )
+      return;
+    setBusy(true);
+    setMessage("");
+    try {
+      const res = await fetch(
+        `/api/items/${id}?who=${encodeURIComponent(getName())}`,
+        { method: "DELETE" }
+      );
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        setMessage(data.error || "削除に失敗しました");
+        setBusy(false);
+        return;
+      }
+      router.replace("/owner");
+    } catch {
+      setMessage("削除に失敗しました");
+      setBusy(false);
+    }
+  }
+
   function removePhoto(url: string) {
     if (!item) return;
     if (!confirm("この写真を削除しますか?")) return;
@@ -410,6 +438,14 @@ export default function ItemDetailPage({
         className="mt-6 w-full rounded-xl bg-zinc-900 py-4 text-lg font-semibold text-white shadow-lg shadow-zinc-900/20 active:scale-[0.99] disabled:opacity-40"
       >
         {busy ? "保存中…" : "保存する"}
+      </button>
+
+      <button
+        onClick={deleteItem}
+        disabled={busy}
+        className="mt-3 w-full rounded-xl border border-red-200 bg-white py-3.5 text-base font-semibold text-red-600 active:scale-[0.99] disabled:opacity-40"
+      >
+        この商品を削除する
       </button>
     </main>
   );

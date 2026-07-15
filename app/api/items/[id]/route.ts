@@ -1,9 +1,25 @@
 import { NextRequest, NextResponse } from "next/server";
+import { del } from "@vercel/blob";
 import { isAuthed } from "@/lib/auth";
-import { getItem, updateItem, addLog, getSettings } from "@/lib/sheets";
+import { getItem, updateItem, deleteItem, addLog, getSettings } from "@/lib/sheets";
 import { notify } from "@/lib/push";
+import { Item } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
+
+/** 商品に紐づくBlobストアの写真を削除(残骸防止・失敗は無視) */
+async function deletePhotos(item: Item): Promise<void> {
+  const urls = [item.imageUrl, ...item.images].filter(Boolean);
+  const pathnames = urls
+    .map((u) => {
+      const m = u.match(/[?&]pathname=([^&]+)/);
+      return m ? decodeURIComponent(m[1]) : null;
+    })
+    .filter((p): p is string => !!p);
+  await Promise.all(
+    pathnames.map((p) => del(p).catch(() => {}))
+  );
+}
 
 export async function GET(
   req: NextRequest,
@@ -63,6 +79,24 @@ export async function PATCH(
     }
 
     return NextResponse.json({ item });
+  } catch (e) {
+    return NextResponse.json({ error: String(e) }, { status: 500 });
+  }
+}
+
+export async function DELETE(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  if (!isAuthed(req)) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+  const { id } = await params;
+  try {
+    const who = req.nextUrl.searchParams.get("who") ?? "";
+    const item = await deleteItem(id);
+    if (!item) return NextResponse.json({ error: "not found" }, { status: 404 });
+    await deletePhotos(item);
+    await addLog(who, item.id, item.name, "商品削除");
+    return NextResponse.json({ ok: true });
   } catch (e) {
     return NextResponse.json({ error: String(e) }, { status: 500 });
   }

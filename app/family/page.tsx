@@ -52,7 +52,6 @@ export default function FamilyPage() {
     setMessage("");
     try {
       const url = await uploadPhoto(file);
-      // 1枚目はメイン写真、2枚目以降は追加写真として保存
       const patch = target.imageUrl
         ? { images: [...target.images, url] }
         : { imageUrl: url };
@@ -61,10 +60,10 @@ export default function FamilyPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ ...patch, who: getName() }),
       });
-      setMessage("✅ 写真を保存しました");
+      setMessage("写真を保存しました");
       await load();
     } catch {
-      setMessage("❌ 写真の保存に失敗しました");
+      setMessage("写真の保存に失敗しました。もう一度お試しください。");
     } finally {
       setBusyId(null);
       setPhotoTarget(null);
@@ -82,10 +81,10 @@ export default function FamilyPage() {
         body: JSON.stringify({ status: "発送済み", who: getName() }),
       });
       if (!res.ok) throw new Error();
-      setMessage(`✅ 「${item.name}」を発送完了にしました`);
+      setMessage(`「${item.name}」を発送完了にしました`);
       await load();
     } catch {
-      setMessage("❌ うまくいきませんでした。もう一度押してください。");
+      setMessage("うまくいきませんでした。もう一度押してください。");
     } finally {
       setBusyId(null);
     }
@@ -103,74 +102,81 @@ export default function FamilyPage() {
       />
 
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-indigo-700">やること</h1>
+        <h1 className="text-xl font-semibold tracking-tight text-zinc-900">
+          やること
+        </h1>
         <button
           onClick={load}
-          className="rounded-xl bg-slate-200 px-4 py-2 text-lg font-bold"
+          className="rounded-xl border border-zinc-200 bg-white px-4 py-2 text-base font-medium text-zinc-700 shadow-sm active:scale-[0.97]"
         >
-          🔄 更新
+          更新
         </button>
       </div>
 
       {message && (
-        <p className="mt-4 rounded-xl bg-amber-50 p-4 text-center text-lg font-bold">
+        <p className="mt-4 rounded-xl border border-zinc-200 bg-white px-4 py-3 text-center text-base font-medium text-zinc-800 shadow-sm">
           {message}
         </p>
       )}
 
       {loading ? (
-        <p className="mt-10 text-center text-xl text-slate-400">読み込み中…</p>
+        <p className="mt-12 text-center text-lg text-zinc-400">読み込み中…</p>
       ) : todos.length === 0 ? (
-        <div className="mt-8 rounded-2xl bg-green-50 p-8 text-center">
-          <div className="text-5xl">🎉</div>
-          <p className="mt-3 text-xl font-bold text-green-700">
+        <div className="mt-6 rounded-2xl border border-zinc-200 bg-white p-8 text-center shadow-sm">
+          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-emerald-50 text-2xl">
+            ✓
+          </div>
+          <p className="mt-3 text-lg font-semibold text-zinc-800">
             今はやることがありません
           </p>
         </div>
       ) : (
-        <div className="mt-6 space-y-6">
+        <div className="mt-5 space-y-5">
           {todos.map((item) => (
             <div
               key={item.id}
-              className="overflow-hidden rounded-3xl border-4 border-amber-400 bg-white shadow-lg"
+              className="overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-sm"
             >
-              <div className="bg-amber-400 px-4 py-2 text-lg font-bold text-amber-900">
-                📦 梱包・発送をお願いします
+              <div className="border-b border-amber-100 bg-amber-50 px-5 py-2.5 text-base font-semibold text-amber-800">
+                梱包・発送をお願いします
               </div>
               {item.imageUrl && (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
                   src={item.imageUrl}
                   alt={item.name}
-                  className="h-52 w-full bg-slate-50 object-contain"
+                  className="h-52 w-full bg-zinc-50 object-contain"
                 />
               )}
               <div className="p-5">
-                <p className="text-xl font-bold">{item.name}</p>
+                <p className="text-xl font-semibold text-zinc-900">{item.name}</p>
                 {item.location && (
-                  <p className="mt-2 rounded-xl bg-sky-50 p-3 text-lg">
-                    📍 保管場所: <span className="font-bold">{item.location}</span>
+                  <p className="mt-2.5 rounded-xl bg-zinc-100 px-4 py-2.5 text-base text-zinc-700">
+                    保管場所:{" "}
+                    <span className="font-semibold text-zinc-900">
+                      {item.location}
+                    </span>
                   </p>
                 )}
                 {item.intl && (
-                  <p className="mt-2 rounded-xl bg-purple-50 p-3 text-purple-700">
-                    ✈️ 海外発送です。ラベルはオーナーが用意します。
+                  <p className="mt-2 rounded-xl bg-violet-50 px-4 py-2.5 text-base text-violet-700">
+                    海外発送です。ラベルはオーナーが用意します。
                   </p>
                 )}
-                <div className="mt-4 grid gap-3">
+                <div className="mt-4 grid gap-2.5">
                   <button
                     onClick={() => pickPhoto(item)}
                     disabled={busyId === item.id}
-                    className="rounded-2xl bg-sky-600 p-4 text-xl font-bold text-white disabled:opacity-50"
+                    className="rounded-xl border border-zinc-300 bg-white py-3.5 text-lg font-semibold text-zinc-800 shadow-sm active:scale-[0.99] disabled:opacity-40"
                   >
                     📷 写真を撮る
                   </button>
                   <button
                     onClick={() => markShipped(item)}
                     disabled={busyId === item.id}
-                    className="rounded-2xl bg-green-600 p-4 text-xl font-bold text-white disabled:opacity-50"
+                    className="rounded-xl bg-zinc-900 py-3.5 text-lg font-semibold text-white shadow-lg shadow-zinc-900/15 active:scale-[0.99] disabled:opacity-40"
                   >
-                    ✅ 発送完了
+                    発送完了にする
                   </button>
                 </div>
               </div>
@@ -179,29 +185,33 @@ export default function FamilyPage() {
         </div>
       )}
 
-      <h2 className="mt-12 text-xl font-bold text-slate-600">在庫の商品</h2>
-      <p className="text-slate-400">写真を撮りたい商品をタップしてください</p>
-      <div className="mt-4 grid grid-cols-2 gap-3">
+      <h2 className="mt-10 text-base font-semibold text-zinc-500">在庫の商品</h2>
+      <p className="mt-0.5 text-sm text-zinc-400">
+        写真を撮りたい商品をタップしてください
+      </p>
+      <div className="mt-3 grid grid-cols-2 gap-3">
         {stock.map((item) => (
           <button
             key={item.id}
             onClick={() => pickPhoto(item)}
             disabled={busyId === item.id}
-            className="overflow-hidden rounded-2xl border-2 border-slate-200 bg-white text-left shadow-sm disabled:opacity-50"
+            className="overflow-hidden rounded-2xl border border-zinc-200 bg-white text-left shadow-sm active:scale-[0.98] disabled:opacity-40"
           >
             {item.imageUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img
                 src={item.imageUrl}
                 alt={item.name}
-                className="h-28 w-full bg-slate-50 object-contain"
+                className="h-28 w-full bg-zinc-50 object-contain"
               />
             ) : (
-              <div className="flex h-28 w-full items-center justify-center bg-slate-100 text-4xl">
+              <div className="flex h-28 w-full items-center justify-center bg-zinc-100 text-2xl text-zinc-300">
                 📷
               </div>
             )}
-            <p className="truncate p-3 font-bold">{item.name}</p>
+            <p className="truncate px-3 py-2.5 text-base font-medium text-zinc-800">
+              {item.name}
+            </p>
           </button>
         ))}
       </div>

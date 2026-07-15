@@ -49,14 +49,17 @@ export default function LabelPage({
   return (
     <main className="mx-auto max-w-2xl p-6">
       <div className="no-print mb-6 flex items-center justify-between">
-        <Link href={`/owner/item/${item.id}`} className="text-indigo-600">
+        <Link
+          href={`/owner/item/${item.id}`}
+          className="text-sm font-medium text-zinc-600 underline underline-offset-2"
+        >
           ← 商品に戻る
         </Link>
         <button
           onClick={() => window.print()}
-          className="rounded-xl bg-indigo-600 px-6 py-3 font-bold text-white"
+          className="rounded-xl bg-zinc-900 px-6 py-3 text-sm font-semibold text-white shadow-md shadow-zinc-900/15 active:scale-[0.97]"
         >
-          🖨 印刷する
+          印刷する
         </button>
       </div>
 

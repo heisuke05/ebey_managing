@@ -16,11 +16,15 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "10MB以下の画像にしてください" }, { status: 400 });
     }
     const ext = (file.name.split(".").pop() || "jpg").toLowerCase();
+    // Privateストアに保存し、認証付きの自前API経由で配信する
     const blob = await put(`items/${Date.now()}.${ext}`, file, {
-      access: "public",
+      access: "private",
       contentType: file.type || "image/jpeg",
+      addRandomSuffix: true,
     });
-    return NextResponse.json({ url: blob.url });
+    return NextResponse.json({
+      url: `/api/photo?pathname=${encodeURIComponent(blob.pathname)}`,
+    });
   } catch (e) {
     return NextResponse.json(
       { error: `アップロード失敗: ${String(e)}` },

@@ -4,8 +4,8 @@
   "description": "家族で使うeBay在庫・発送管理アプリ",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#f8fafc",
-  "theme_color": "#4f46e5",
+  "background_color": "#f5f5f6",
+  "theme_color": "#18181b",
   "icons": [
     { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png" },
     { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png" }

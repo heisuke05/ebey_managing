@@ -8,8 +8,8 @@ import { getRole, registerPush, saveRole } from "@/lib/client";
 const ROLES: { role: Role; emoji: string }[] = [
   { role: "owner", emoji: "👑" },
   { role: "wife", emoji: "🌸" },
-  { role: "father", emoji: "👴" },
-  { role: "mother", emoji: "👵" },
+  { role: "father", emoji: "👨🏻" },
+  { role: "mother", emoji: "👩🏻" },
 ];
 
 function homeFor(role: Role): string {
@@ -24,7 +24,6 @@ export default function LoginPage() {
   const [error, setError] = useState("");
 
   useEffect(() => {
-    // すでにログイン済みならホームへ
     const role = getRole();
     if (role) {
       fetch("/api/suggestions").then((r) => {
@@ -35,7 +34,7 @@ export default function LoginPage() {
 
   async function login() {
     if (!selected) {
-      setError("あなたの名前をタップしてください");
+      setError("お名前を選択してください");
       return;
     }
     setBusy(true);
@@ -52,7 +51,6 @@ export default function LoginPage() {
         return;
       }
       saveRole(selected, ROLE_LABELS[selected]);
-      // 通知の許可(失敗しても先へ進む)
       await registerPush(selected, ROLE_LABELS[selected]);
       router.replace(homeFor(selected));
     } finally {
@@ -61,44 +59,49 @@ export default function LoginPage() {
   }
 
   return (
-    <main className="mx-auto max-w-md px-6 py-10">
-      <h1 className="text-center text-3xl font-bold text-indigo-700">
-        eBay 家族管理
-      </h1>
-      <p className="mt-2 text-center text-slate-500">
-        あなたはどなたですか?
-      </p>
+    <main className="mx-auto flex min-h-screen max-w-md flex-col justify-center px-6 py-12">
+      <div className="text-center">
+        <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-zinc-900 text-2xl font-bold text-white shadow-lg shadow-zinc-900/20">
+          E
+        </div>
+        <h1 className="mt-4 text-2xl font-semibold tracking-tight text-zinc-900">
+          eBay 家族管理
+        </h1>
+        <p className="mt-1 text-sm text-zinc-500">お名前を選んでログイン</p>
+      </div>
 
-      <div className="mt-8 grid grid-cols-2 gap-4">
+      <div className="mt-8 grid grid-cols-2 gap-3">
         {ROLES.map(({ role, emoji }) => (
           <button
             key={role}
             onClick={() => setSelected(role)}
-            className={`rounded-2xl border-4 p-6 text-center shadow-sm transition ${
+            className={`rounded-2xl border bg-white p-5 text-center transition-all ${
               selected === role
-                ? "border-indigo-600 bg-indigo-50"
-                : "border-slate-200 bg-white"
+                ? "border-zinc-900 shadow-md ring-2 ring-zinc-900"
+                : "border-zinc-200 shadow-sm active:scale-[0.98]"
             }`}
           >
-            <div className="text-5xl">{emoji}</div>
-            <div className="mt-2 text-2xl font-bold">{ROLE_LABELS[role]}</div>
+            <div className="text-3xl">{emoji}</div>
+            <div className="mt-2 text-lg font-semibold text-zinc-800">
+              {ROLE_LABELS[role]}
+            </div>
           </button>
         ))}
       </div>
 
       <div className="mt-8">
-        <label className="block text-lg font-semibold">あいことば</label>
+        <label className="text-sm font-medium text-zinc-700">あいことば</label>
         <input
           type="password"
           value={passcode}
           onChange={(e) => setPasscode(e.target.value)}
           placeholder="家族のあいことば"
-          className="mt-2 w-full rounded-xl border-2 border-slate-300 bg-white p-4 text-2xl"
+          className="mt-1.5 w-full rounded-xl border border-zinc-300 bg-white px-4 py-3.5 text-lg outline-none transition focus:border-zinc-900 focus:ring-4 focus:ring-zinc-900/10"
         />
       </div>
 
       {error && (
-        <p className="mt-4 rounded-lg bg-red-50 p-3 text-center text-lg font-semibold text-red-600">
+        <p className="mt-4 rounded-xl bg-red-50 px-4 py-3 text-center text-sm font-medium text-red-600">
           {error}
         </p>
       )}
@@ -106,15 +109,13 @@ export default function LoginPage() {
       <button
         onClick={login}
         disabled={busy}
-        className="mt-6 w-full rounded-2xl bg-indigo-600 p-5 text-2xl font-bold text-white shadow-lg disabled:opacity-50"
+        className="mt-6 w-full rounded-xl bg-zinc-900 py-4 text-lg font-semibold text-white shadow-lg shadow-zinc-900/20 transition active:scale-[0.99] disabled:opacity-40"
       >
         {busy ? "確認中…" : "はじめる"}
       </button>
 
-      <p className="mt-6 text-center text-sm text-slate-400">
-        「はじめる」を押すと通知の許可を求められます。
-        <br />
-        「許可」を押してください。
+      <p className="mt-6 text-center text-xs leading-relaxed text-zinc-400">
+        「はじめる」を押すと通知の許可を求められます。「許可」を押してください。
       </p>
     </main>
   );

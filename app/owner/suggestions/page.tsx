@@ -35,18 +35,18 @@ export default function SuggestionsPage() {
   async function runNow() {
     if (!confirm("AI市場調査を今すぐ実行しますか?(1〜3分かかります)")) return;
     setRunning(true);
-    setMessage("🔍 AIが市場を調査しています。数分お待ちください…");
+    setMessage("AIが市場を調査しています。数分お待ちください…");
     try {
       const res = await fetch("/api/ai-suggest", { method: "POST" });
       const data = await res.json();
       if (!res.ok) {
-        setMessage(`❌ ${data.error || "実行に失敗しました"}`);
+        setMessage(data.error || "実行に失敗しました");
         return;
       }
-      setMessage("✅ 新しい提案が届きました");
+      setMessage("新しい提案が届きました");
       await load();
     } catch {
-      setMessage("❌ 実行に失敗しました");
+      setMessage("実行に失敗しました");
     } finally {
       setRunning(false);
     }
@@ -55,46 +55,54 @@ export default function SuggestionsPage() {
   return (
     <main className="mx-auto max-w-2xl px-4 pb-16 pt-6">
       <div className="flex items-center gap-3">
-        <Link href="/owner" className="text-2xl">
+        <Link
+          href="/owner"
+          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-zinc-200 bg-white text-zinc-600 shadow-sm"
+        >
           ←
         </Link>
-        <h1 className="flex-1 text-2xl font-bold text-purple-700">
-          💡 AI市場サジェスチョン
+        <h1 className="min-w-0 flex-1 text-xl font-semibold tracking-tight text-zinc-900">
+          AI市場サジェスチョン
         </h1>
         <button
           onClick={runNow}
           disabled={running}
-          className="rounded-xl bg-purple-600 px-4 py-2 font-bold text-white disabled:opacity-50"
+          className="shrink-0 rounded-xl bg-zinc-900 px-4 py-2 text-sm font-semibold text-white shadow-md shadow-zinc-900/15 active:scale-[0.97] disabled:opacity-40"
         >
           {running ? "調査中…" : "今すぐ実行"}
         </button>
       </div>
 
-      <p className="mt-2 text-sm text-slate-500">
+      <p className="mt-2 text-sm text-zinc-500">
         毎週月曜の朝に自動で市場を調査し、おすすめ商品を提案します。
       </p>
 
       {message && (
-        <p className="mt-4 rounded-lg bg-purple-50 p-3 font-semibold text-purple-700">
+        <p className="mt-4 rounded-xl border border-zinc-200 bg-white px-4 py-3 text-sm font-medium text-zinc-800 shadow-sm">
           {message}
         </p>
       )}
 
       {loading ? (
-        <p className="mt-10 text-center text-slate-400">読み込み中…</p>
+        <p className="mt-12 text-center text-zinc-400">読み込み中…</p>
       ) : suggestions.length === 0 ? (
-        <p className="mt-10 text-center text-slate-400">
+        <p className="mt-12 text-center text-zinc-400">
           まだ提案がありません。「今すぐ実行」を押してみてください。
         </p>
       ) : (
-        <div className="mt-6 space-y-4">
+        <div className="mt-5 space-y-3">
           {suggestions.map((s, i) => (
-            <div key={i} className="rounded-2xl bg-white p-5 shadow-sm">
-              <p className="font-bold text-purple-700">{s.title}</p>
-              <p className="mt-1 text-xs text-slate-400">
-                {new Date(s.date).toLocaleString("ja-JP")}
-              </p>
-              <div className="mt-3 whitespace-pre-wrap text-sm leading-relaxed">
+            <div
+              key={i}
+              className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm"
+            >
+              <div className="flex items-baseline justify-between gap-3">
+                <p className="font-semibold text-zinc-900">{s.title}</p>
+                <p className="shrink-0 text-xs text-zinc-400">
+                  {new Date(s.date).toLocaleDateString("ja-JP")}
+                </p>
+              </div>
+              <div className="mt-3 whitespace-pre-wrap text-sm leading-relaxed text-zinc-700">
                 {s.body}
               </div>
             </div>

@@ -2,12 +2,16 @@ export type ItemStatus = "在庫" | "出品中" | "売れた" | "梱包依頼" |
 
 export const STATUSES: ItemStatus[] = ["在庫", "出品中", "売れた", "梱包依頼", "発送済み"];
 
+export type Currency = "USD" | "JPY";
+
 export interface Item {
   id: string;
   name: string;
-  imageUrl: string;
+  imageUrl: string; // メイン写真
+  images: string[]; // 追加写真
   listingUrl: string;
-  priceUSD: number; // 販売価格 (USD)
+  price: number; // 販売価格
+  currency: Currency; // 販売価格の通貨
   costJPY: number; // 仕入れ値 (円)
   shippingJPY: number; // 送料見込み (円)
   status: ItemStatus;
@@ -21,6 +25,12 @@ export interface Item {
   note: string;
   createdAt: string;
   updatedAt: string;
+}
+
+export function priceLabel(item: Pick<Item, "price" | "currency">): string {
+  return item.currency === "JPY"
+    ? `¥${item.price.toLocaleString()}`
+    : `$${item.price.toLocaleString()}`;
 }
 
 export interface Suggestion {

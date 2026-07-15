@@ -1,22 +1,28 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { Currency } from "@/lib/types";
 import { getName, uploadPhoto } from "@/lib/client";
+import BarcodeScanner from "@/components/BarcodeScanner";
 
 export default function NewItemPage() {
   const router = useRouter();
   const fileRef = useRef<HTMLInputElement>(null);
-  const [imageUrl, setImageUrl] = useState("");
+  const [photos, setPhotos] = useState<string[]>([]);
   const [uploading, setUploading] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [scanning, setScanning] = useState(false);
+  const [lookingUp, setLookingUp] = useState(false);
   const [error, setError] = useState("");
+  const [info, setInfo] = useState("");
 
   const [form, setForm] = useState({
     name: "",
     listingUrl: "",
-    priceUSD: "",
+    price: "",
+    currency: "USD" as Currency,
     costJPY: "",
     shippingJPY: "",
     location: "",
@@ -31,19 +37,52 @@ export default function NewItemPage() {
   }
 
   async function onPhoto(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
+    const files = Array.from(e.target.files ?? []);
     e.target.value = "";
-    if (!file) return;
+    if (files.length === 0) return;
     setUploading(true);
     setError("");
     try {
-      setImageUrl(await uploadPhoto(file));
+      for (const file of files) {
+        const url = await uploadPhoto(file);
+        setPhotos((p) => [...p, url]);
+      }
     } catch (err) {
       setError(String((err as Error).message ?? err));
     } finally {
       setUploading(false);
     }
   }
+
+  function removePhoto(url: string) {
+    setPhotos((p) => p.filter((u) => u !== url));
+  }
+
+  const onBarcode = useCallback(async (code: string) => {
+    setScanning(false);
+    setLookingUp(true);
+    setError("");
+    setInfo(`🔍 バーコード ${code} の商品を検索中…`);
+    try {
+      const res = await fetch(`/api/barcode?code=${encodeURIComponent(code)}`);
+      const data = await res.json();
+      if (!res.ok) {
+        setInfo("");
+        setError(data.error || "商品情報が見つかりませんでした");
+        return;
+      }
+      setForm((f) => ({ ...f, name: data.name || f.name }));
+      if (data.imageUrl) {
+        setPhotos((p) => (p.includes(data.imageUrl) ? p : [...p, data.imageUrl]));
+      }
+      setInfo(`✅ 商品情報を取得しました: ${data.name}`);
+    } catch {
+      setInfo("");
+      setError("商品検索に失敗しました");
+    } finally {
+      setLookingUp(false);
+    }
+  }, []);
 
   async function submit() {
     if (!form.name.trim()) {
@@ -58,9 +97,11 @@ export default function NewItemPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           name: form.name.trim(),
-          imageUrl,
+          imageUrl: photos[0] ?? "",
+          images: photos.slice(1),
           listingUrl: form.listingUrl.trim(),
-          priceUSD: parseFloat(form.priceUSD) || 0,
+          price: parseFloat(form.price) || 0,
+          currency: form.currency,
           costJPY: parseFloat(form.costJPY) || 0,
           shippingJPY: parseFloat(form.shippingJPY) || 0,
           location: form.location.trim(),
@@ -87,6 +128,10 @@ export default function NewItemPage() {
 
   return (
     <main className="mx-auto max-w-md px-4 pb-16 pt-6">
+      {scanning && (
+        <BarcodeScanner onDetect={onBarcode} onClose={() => setScanning(false)} />
+      )}
+
       <div className="flex items-center gap-3">
         <Link href="/owner" className="text-2xl">
           ←
@@ -94,28 +139,60 @@ export default function NewItemPage() {
         <h1 className="text-2xl font-bold text-indigo-700">商品登録</h1>
       </div>
 
+      <button
+        onClick={() => setScanning(true)}
+        disabled={lookingUp}
+        className="mt-4 w-full rounded-2xl bg-slate-800 p-4 text-lg font-bold text-white disabled:opacity-50"
+      >
+        {lookingUp ? "検索中…" : "📷 バーコードをスキャンして自動入力"}
+      </button>
+      {info && (
+        <p className="mt-2 rounded-lg bg-green-50 p-3 text-sm text-green-700">{info}</p>
+      )}
+
       <input
         ref={fileRef}
         type="file"
         accept="image/*"
+        multiple
         className="hidden"
         onChange={onPhoto}
       />
 
-      <button
-        onClick={() => fileRef.current?.click()}
-        disabled={uploading}
-        className="mt-5 flex h-48 w-full items-center justify-center overflow-hidden rounded-2xl border-2 border-dashed border-slate-300 bg-white"
-      >
-        {imageUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={imageUrl} alt="商品" className="h-full w-full object-contain" />
-        ) : (
-          <span className="text-slate-400">
-            {uploading ? "アップロード中…" : "📷 タップして写真を追加"}
-          </span>
-        )}
-      </button>
+      {/* 写真(複数) */}
+      <div className="mt-5">
+        <span className="font-semibold">写真(複数可・1枚目がメイン)</span>
+        <div className="mt-2 grid grid-cols-3 gap-2">
+          {photos.map((url, i) => (
+            <div key={url} className="relative">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={url}
+                alt={`写真${i + 1}`}
+                className="h-28 w-full rounded-xl bg-slate-50 object-contain"
+              />
+              {i === 0 && (
+                <span className="absolute left-1 top-1 rounded bg-indigo-600 px-1.5 py-0.5 text-xs font-bold text-white">
+                  メイン
+                </span>
+              )}
+              <button
+                onClick={() => removePhoto(url)}
+                className="absolute right-1 top-1 h-6 w-6 rounded-full bg-black/60 text-sm text-white"
+              >
+                ✕
+              </button>
+            </div>
+          ))}
+          <button
+            onClick={() => fileRef.current?.click()}
+            disabled={uploading}
+            className="flex h-28 items-center justify-center rounded-xl border-2 border-dashed border-slate-300 bg-white text-slate-400"
+          >
+            {uploading ? "追加中…" : "+ 追加"}
+          </button>
+        </div>
+      </div>
 
       <div className="mt-5 space-y-4">
         <label className="block">
@@ -136,18 +213,39 @@ export default function NewItemPage() {
             placeholder="https://www.ebay.com/itm/..."
           />
         </label>
-        <div className="grid grid-cols-2 gap-3">
-          <label className="block">
-            <span className="font-semibold">販売価格 (USD)</span>
+
+        {/* 販売価格 + 通貨 */}
+        <div>
+          <span className="font-semibold">販売価格</span>
+          <div className="mt-1 flex gap-2">
             <input
-              className={input}
+              className="w-full rounded-xl border-2 border-slate-200 bg-white p-3 text-lg"
               type="number"
               inputMode="decimal"
-              value={form.priceUSD}
-              onChange={(e) => set("priceUSD", e.target.value)}
-              placeholder="80"
+              value={form.price}
+              onChange={(e) => set("price", e.target.value)}
+              placeholder={form.currency === "USD" ? "80" : "12000"}
             />
-          </label>
+            <div className="flex shrink-0 overflow-hidden rounded-xl border-2 border-slate-200">
+              {(["USD", "JPY"] as Currency[]).map((c) => (
+                <button
+                  key={c}
+                  type="button"
+                  onClick={() => set("currency", c)}
+                  className={`px-4 text-lg font-bold ${
+                    form.currency === c
+                      ? "bg-indigo-600 text-white"
+                      : "bg-white text-slate-500"
+                  }`}
+                >
+                  {c === "USD" ? "$" : "¥"}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-3">
           <label className="block">
             <span className="font-semibold">仕入れ値 (円)</span>
             <input
@@ -159,8 +257,6 @@ export default function NewItemPage() {
               placeholder="5000"
             />
           </label>
-        </div>
-        <div className="grid grid-cols-2 gap-3">
           <label className="block">
             <span className="font-semibold">送料見込み (円)</span>
             <input
@@ -172,16 +268,16 @@ export default function NewItemPage() {
               placeholder="2000"
             />
           </label>
-          <label className="block">
-            <span className="font-semibold">保管場所</span>
-            <input
-              className={input}
-              value={form.location}
-              onChange={(e) => set("location", e.target.value)}
-              placeholder="押入れ上段 箱A"
-            />
-          </label>
         </div>
+        <label className="block">
+          <span className="font-semibold">保管場所</span>
+          <input
+            className={input}
+            value={form.location}
+            onChange={(e) => set("location", e.target.value)}
+            placeholder="押入れ上段 箱A"
+          />
+        </label>
         <label className="block">
           <span className="font-semibold">内容品(税関申告用・英語)</span>
           <input

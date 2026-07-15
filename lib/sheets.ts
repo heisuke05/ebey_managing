@@ -14,7 +14,7 @@ const ITEM_HEADERS = [
   "商品名",
   "商品画像URL",
   "商品リンク",
-  "販売価格USD",
+  "販売価格",
   "仕入れ値JPY",
   "送料JPY",
   "ステータス",
@@ -28,6 +28,8 @@ const ITEM_HEADERS = [
   "メモ",
   "登録日",
   "更新日",
+  "通貨",
+  "追加画像",
 ];
 
 let cachedClient: sheets_v4.Sheets | null = null;
@@ -65,16 +67,28 @@ export async function ensureSetup(): Promise<void> {
     [SETTINGS_TAB, ["キー", "値"]],
   ];
   const missing = wanted.filter(([name]) => !existing.has(name));
-  if (missing.length === 0) return;
 
-  await api.spreadsheets.batchUpdate({
-    spreadsheetId: SHEET_ID,
-    requestBody: {
-      requests: missing.map(([name]) => ({
-        addSheet: { properties: { title: name } },
-      })),
-    },
-  });
+  if (missing.length > 0) {
+    await api.spreadsheets.batchUpdate({
+      spreadsheetId: SHEET_ID,
+      requestBody: {
+        requests: missing.map(([name]) => ({
+          addSheet: { properties: { title: name } },
+        })),
+      },
+    });
+  }
+
+  // 在庫タブのヘッダーは列追加に備えて常に最新へ同期
+  if (existing.has(ITEMS_TAB)) {
+    await api.spreadsheets.values.update({
+      spreadsheetId: SHEET_ID,
+      range: `${ITEMS_TAB}!A1`,
+      valueInputOption: "RAW",
+      requestBody: { values: [ITEM_HEADERS] },
+    });
+  }
+  if (missing.length === 0) return;
   for (const [name, headers] of missing) {
     await api.spreadsheets.values.update({
       spreadsheetId: SHEET_ID,
@@ -116,7 +130,7 @@ function rowToItem(row: string[]): Item {
     name: get(1),
     imageUrl: get(2),
     listingUrl: get(3),
-    priceUSD: parseFloat(get(4)) || 0,
+    price: parseFloat(get(4)) || 0,
     costJPY: parseFloat(get(5)) || 0,
     shippingJPY: parseFloat(get(6)) || 0,
     status: (get(7) || "在庫") as ItemStatus,
@@ -130,6 +144,8 @@ function rowToItem(row: string[]): Item {
     note: get(15),
     createdAt: get(16),
     updatedAt: get(17),
+    currency: get(18) === "JPY" ? "JPY" : "USD",
+    images: get(19) ? get(19).split("\n").filter(Boolean) : [],
   };
 }
 
@@ -139,7 +155,7 @@ function itemToRow(item: Item): string[] {
     item.name,
     item.imageUrl,
     item.listingUrl,
-    String(item.priceUSD),
+    String(item.price),
     String(item.costJPY),
     String(item.shippingJPY),
     item.status,
@@ -153,6 +169,8 @@ function itemToRow(item: Item): string[] {
     item.note,
     item.createdAt,
     item.updatedAt,
+    item.currency,
+    item.images.join("\n"),
   ];
 }
 
@@ -174,8 +192,10 @@ export async function createItem(
     id: `it_${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`,
     name: data.name,
     imageUrl: data.imageUrl ?? "",
+    images: data.images ?? [],
     listingUrl: data.listingUrl ?? "",
-    priceUSD: data.priceUSD ?? 0,
+    price: data.price ?? 0,
+    currency: data.currency ?? "USD",
     costJPY: data.costJPY ?? 0,
     shippingJPY: data.shippingJPY ?? 0,
     status: data.status ?? "在庫",

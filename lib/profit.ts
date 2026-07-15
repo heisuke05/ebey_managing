@@ -30,14 +30,14 @@ export interface ProfitBreakdown {
   rate: number;
 }
 
-/** eBay手数料(既定14.35% + $0.30/件)を差し引いた想定純利益 */
+/** eBay手数料(既定14.35% + $0.30/件)を差し引いた想定純利益(円換算) */
 export function calcProfit(
-  item: Pick<Item, "priceUSD" | "costJPY" | "shippingJPY">,
+  item: Pick<Item, "price" | "currency" | "costJPY" | "shippingJPY">,
   rate: number,
   feeRate = 0.1435
 ): ProfitBreakdown {
-  const revenueJPY = item.priceUSD * rate;
-  const feeJPY = (item.priceUSD * feeRate + 0.3) * rate;
+  const revenueJPY = item.currency === "JPY" ? item.price : item.price * rate;
+  const feeJPY = revenueJPY * feeRate + 0.3 * rate;
   const profitJPY = revenueJPY - feeJPY - item.costJPY - item.shippingJPY;
   return {
     revenueJPY: Math.round(revenueJPY),

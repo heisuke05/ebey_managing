@@ -95,7 +95,10 @@ export default function LabelPage({
               <tr>
                 <td className="border border-black p-2 font-bold">Value</td>
                 <td className="border border-black p-2">
-                  USD {item.priceUSD.toFixed(2)}
+                  {item.currency}{" "}
+                  {item.currency === "JPY"
+                    ? item.price.toLocaleString()
+                    : item.price.toFixed(2)}
                 </td>
               </tr>
               <tr>

@@ -23,7 +23,10 @@ async function runSuggestion(): Promise<{ title: string; body: string }> {
     if (active.length > 0) {
       inventoryNote = active
         .slice(0, 50)
-        .map((i) => `- ${i.name} ($${i.priceUSD} / 仕入 ¥${i.costJPY})`)
+        .map(
+          (i) =>
+            `- ${i.name} (${i.currency === "JPY" ? "¥" : "$"}${i.price} / 仕入 ¥${i.costJPY})`
+        )
         .join("\n");
     }
   } catch {

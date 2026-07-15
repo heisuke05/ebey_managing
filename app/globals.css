@@ -1,7 +1,8 @@
 @import "tailwindcss";
 
+/* 端末の文字サイズ設定(iOS Dynamic Type / Androidのフォントサイズ)に追従する */
 html {
-  -webkit-text-size-adjust: 100%;
+  font: -apple-system-body;
 }
 
 body {

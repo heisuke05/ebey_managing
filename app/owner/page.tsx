@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Item, ItemStatus, STATUSES } from "@/lib/types";
+import { Item, ItemStatus, STATUSES, priceLabel } from "@/lib/types";
 import { calcProfit } from "@/lib/profit";
 
 const STATUS_COLORS: Record<ItemStatus, string> = {
@@ -156,7 +156,7 @@ export default function OwnerPage() {
                     </span>
                   </div>
                   <p className="mt-1 text-sm text-slate-500">
-                    ${item.priceUSD} / 仕入 ¥{item.costJPY.toLocaleString()}
+                    {priceLabel(item)} / 仕入 ¥{item.costJPY.toLocaleString()}
                     {item.intl && " ✈️"}
                   </p>
                   <p className="text-sm font-semibold text-green-600">

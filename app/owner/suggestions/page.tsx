@@ -1,9 +1,9 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Suggestion } from "@/lib/types";
+import BottomNav from "@/components/BottomNav";
 
 export default function SuggestionsPage() {
   const router = useRouter();
@@ -53,14 +53,8 @@ export default function SuggestionsPage() {
   }
 
   return (
-    <main className="mx-auto max-w-2xl px-4 pb-16 pt-6">
+    <main className="mx-auto max-w-2xl px-4 pb-28 pt-6">
       <div className="flex items-center gap-3">
-        <Link
-          href="/owner"
-          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-zinc-200 bg-white text-zinc-600 shadow-sm"
-        >
-          ←
-        </Link>
         <h1 className="min-w-0 flex-1 text-xl font-semibold tracking-tight text-zinc-900">
           AI市場サジェスチョン
         </h1>
@@ -109,6 +103,8 @@ export default function SuggestionsPage() {
           ))}
         </div>
       )}
+
+      <BottomNav />
     </main>
   );
 }

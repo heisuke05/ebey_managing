@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Item, ItemStatus, STATUSES, priceLabel } from "@/lib/types";
 import { calcProfit } from "@/lib/profit";
+import BottomNav from "@/components/BottomNav";
 
 /** 桁数が多いほど小さいフォントを返す(カードからのはみ出し防止) */
 function fitText(s: string): string {
@@ -73,21 +74,13 @@ export default function OwnerPage() {
         <h1 className="text-xl font-semibold tracking-tight text-zinc-900">
           在庫管理
         </h1>
-        <div className="flex gap-2">
-          <button
-            onClick={load}
-            aria-label="更新"
-            className="rounded-xl border border-zinc-200 bg-white px-3.5 py-2 text-sm font-medium text-zinc-600 shadow-sm active:scale-[0.97]"
-          >
-            更新
-          </button>
-          <Link
-            href="/owner/suggestions"
-            className="rounded-xl border border-zinc-200 bg-white px-3.5 py-2 text-sm font-medium text-zinc-800 shadow-sm active:scale-[0.97]"
-          >
-            AI提案
-          </Link>
-        </div>
+        <button
+          onClick={load}
+          aria-label="更新"
+          className="rounded-xl border border-zinc-200 bg-white px-3.5 py-2 text-sm font-medium text-zinc-600 shadow-sm active:scale-[0.97]"
+        >
+          更新
+        </button>
       </div>
 
       <div className="mt-4 grid grid-cols-3 gap-2.5">
@@ -211,10 +204,12 @@ export default function OwnerPage() {
 
       <Link
         href="/owner/new"
-        className="fixed bottom-6 right-6 rounded-full bg-zinc-900 px-6 py-4 text-base font-semibold text-white shadow-xl shadow-zinc-900/25 active:scale-[0.97]"
+        className="fixed bottom-20 right-5 z-40 rounded-full bg-zinc-900 px-5 py-3.5 text-base font-semibold text-white shadow-xl shadow-zinc-900/25 active:scale-[0.97]"
       >
         + 商品登録
       </Link>
+
+      <BottomNav />
     </main>
   );
 }

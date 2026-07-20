@@ -1,8 +1,8 @@
 "use client";
 
-import { useCallback, useRef, useState } from "react";
+import { Suspense, useCallback, useRef, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Currency } from "@/lib/types";
 import { getName, uploadPhoto } from "@/lib/client";
 import BarcodeScanner from "@/components/BarcodeScanner";
@@ -11,10 +11,14 @@ const input =
   "mt-1.5 w-full rounded-xl border border-zinc-300 bg-white px-3.5 py-3 text-base outline-none transition focus:border-zinc-900 focus:ring-4 focus:ring-zinc-900/10";
 const label = "text-sm font-medium text-zinc-700";
 
-export default function NewItemPage() {
+function NewItemForm() {
   const router = useRouter();
+  const search = useSearchParams();
   const fileRef = useRef<HTMLInputElement>(null);
-  const [photos, setPhotos] = useState<string[]>([]);
+  const prefillImage = search.get("image");
+  const [photos, setPhotos] = useState<string[]>(
+    prefillImage ? [prefillImage] : []
+  );
   const [uploading, setUploading] = useState(false);
   const [busy, setBusy] = useState(false);
   const [scanning, setScanning] = useState(false);
@@ -23,7 +27,7 @@ export default function NewItemPage() {
   const [info, setInfo] = useState("");
 
   const [form, setForm] = useState({
-    name: "",
+    name: search.get("name") ?? "",
     listingUrl: "",
     price: "",
     currency: "USD" as Currency,
@@ -338,5 +342,13 @@ export default function NewItemPage() {
         {busy ? "登録中…" : "登録する"}
       </button>
     </main>
+  );
+}
+
+export default function NewItemPage() {
+  return (
+    <Suspense fallback={<main className="p-6 text-center text-zinc-400">読み込み中…</main>}>
+      <NewItemForm />
+    </Suspense>
   );
 }

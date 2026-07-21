@@ -31,12 +31,45 @@ export default function SearchPage() {
   const [keyword, setKeyword] = useState("");
   const [result, setResult] = useState<Result | null>(null);
   const [error, setError] = useState("");
+  const [storePrice, setStorePrice] = useState("");
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiText, setAiText] = useState("");
+  const [aiError, setAiError] = useState("");
+
+  async function askAi() {
+    if (!result) return;
+    setAiLoading(true);
+    setAiText("");
+    setAiError("");
+    try {
+      const res = await fetch("/api/ai-market", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: result.keyword,
+          costJPY: parseFloat(storePrice) || 0,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setAiError(data.error || "AI相場調査に失敗しました");
+        return;
+      }
+      setAiText(data.text);
+    } catch {
+      setAiError("AI相場調査に失敗しました");
+    } finally {
+      setAiLoading(false);
+    }
+  }
 
   const run = useCallback(
     async (opts: { code?: string; q?: string }) => {
       setLoading(true);
       setError("");
       setResult(null);
+      setAiText("");
+      setAiError("");
       try {
         let name = opts.q ?? "";
         let imageUrl: string | undefined;
@@ -208,6 +241,49 @@ export default function SearchPage() {
               eBay APIキーが未設定のため、現在の相場は表示できません。下のボタンから売り切れ相場を確認できます。
             </div>
           )}
+
+          {/* AIに相場を聞く */}
+          <div className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm">
+            <p className="text-sm font-semibold text-zinc-500">
+              AIに仕入れ判断を聞く
+            </p>
+            <div className="mt-2.5 flex gap-2">
+              <input
+                value={storePrice}
+                onChange={(e) => setStorePrice(e.target.value)}
+                type="number"
+                inputMode="numeric"
+                placeholder="店頭価格(円・任意)"
+                className="w-full rounded-xl border border-zinc-300 bg-white px-3.5 py-3 text-base outline-none transition focus:border-zinc-900 focus:ring-4 focus:ring-zinc-900/10"
+              />
+              <button
+                onClick={askAi}
+                disabled={aiLoading}
+                className="shrink-0 rounded-xl bg-zinc-900 px-5 text-base font-semibold text-white active:scale-[0.97] disabled:opacity-40"
+              >
+                {aiLoading ? "調査中…" : "AIに聞く"}
+              </button>
+            </div>
+            <p className="mt-2 text-xs text-zinc-400">
+              店頭価格を入れると「その値段で買って利益が出るか」まで判定します
+            </p>
+
+            {aiLoading && (
+              <p className="mt-4 text-center text-sm text-zinc-400">
+                AIがeBayの相場を調べています(20〜40秒)…
+              </p>
+            )}
+            {aiError && (
+              <p className="mt-4 rounded-xl bg-red-50 px-4 py-3 text-sm text-red-600">
+                {aiError}
+              </p>
+            )}
+            {aiText && (
+              <div className="mt-4 whitespace-pre-wrap rounded-xl bg-zinc-50 p-4 text-sm leading-relaxed text-zinc-800">
+                {aiText}
+              </div>
+            )}
+          </div>
 
           {/* 売り切れ相場(eBayを開く) */}
           <a

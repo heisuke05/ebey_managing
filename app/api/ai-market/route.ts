@@ -28,13 +28,13 @@ export async function POST(req: NextRequest) {
         ? `\n店頭価格(仕入れ候補): ${Number(costJPY).toLocaleString()}円 — この値段で買って利益が出るかを必ず判定してください。`
         : "";
 
-    const client = new Anthropic();
+    const client = new Anthropic({ maxRetries: 1 });
     const stream = client.messages.stream({
       model: "claude-sonnet-5",
-      max_tokens: 4000,
+      max_tokens: 3000,
       thinking: { type: "adaptive" },
-      output_config: { effort: "medium" },
-      tools: [{ type: "web_search_20260209", name: "web_search", max_uses: 5 }],
+      output_config: { effort: "low" },
+      tools: [{ type: "web_search_20260209", name: "web_search", max_uses: 3 }],
       system:
         "あなたは日本からeBay(米国)へ輸出販売するセラーの仕入れアドバイザーです。" +
         "回答は必ずWeb検索で実際の相場を調べてから作成してください。記憶だけで価格を答えてはいけません。" +
@@ -76,8 +76,35 @@ export async function POST(req: NextRequest) {
       .join("\n")
       .trim();
 
+    if (!text) {
+      return NextResponse.json(
+        { error: "AIが回答を生成できませんでした。もう一度お試しください。" },
+        { status: 500 }
+      );
+    }
     return NextResponse.json({ text, rate });
   } catch (e) {
-    return NextResponse.json({ error: String(e) }, { status: 500 });
+    // Vercelのログにも残す(Deployments → Logs で確認できる)
+    console.error("ai-market failed:", e);
+
+    // Anthropic APIのエラーは原因が分かる形で返す
+    if (e instanceof Anthropic.APIError) {
+      const status = e.status ?? 500;
+      let msg = `AI相場調査に失敗しました (${status})`;
+      if (status === 401) msg = "APIキーが無効です。Vercelの設定を確認してください。";
+      else if (status === 400 && /credit|balance/i.test(e.message))
+        msg = "Anthropicのクレジット残高が不足しています。チャージしてください。";
+      else if (status === 404)
+        msg = "指定のAIモデルが利用できません。設定を見直します。";
+      else if (status === 429)
+        msg = "リクエストが集中しています。少し待って再度お試しください。";
+      else if (status >= 500)
+        msg = "AIサービスが混雑しています。少し待って再度お試しください。";
+      return NextResponse.json({ error: `${msg}\n詳細: ${e.message}` }, { status: 500 });
+    }
+    return NextResponse.json(
+      { error: `AI相場調査に失敗しました。詳細: ${String(e)}` },
+      { status: 500 }
+    );
   }
 }

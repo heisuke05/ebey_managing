@@ -50,14 +50,32 @@ export default function SearchPage() {
           costJPY: parseFloat(storePrice) || 0,
         }),
       });
-      const data = await res.json();
-      if (!res.ok) {
-        setAiError(data.error || "AI相場調査に失敗しました");
+      // タイムアウト時はHTMLが返るため、JSON以外も安全に扱う
+      const raw = await res.text();
+      let data: { text?: string; error?: string } = {};
+      try {
+        data = JSON.parse(raw);
+      } catch {
+        setAiError(
+          res.status === 504
+            ? "時間がかかりすぎて中断されました(504)。商品名を短くして再度お試しください。"
+            : `サーバーエラー (HTTP ${res.status})。しばらく待って再度お試しください。`
+        );
+        return;
+      }
+      if (!res.ok || data.error) {
+        setAiError(data.error || `AI相場調査に失敗しました (HTTP ${res.status})`);
+        return;
+      }
+      if (!data.text) {
+        setAiError("AIから回答が返りませんでした。もう一度お試しください。");
         return;
       }
       setAiText(data.text);
-    } catch {
-      setAiError("AI相場調査に失敗しました");
+    } catch (e) {
+      setAiError(
+        `通信に失敗しました: ${String((e as Error).message ?? e)}。電波状況をご確認ください。`
+      );
     } finally {
       setAiLoading(false);
     }

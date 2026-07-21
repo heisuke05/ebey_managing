@@ -2,16 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 import Anthropic from "@anthropic-ai/sdk";
 import { isAuthed } from "@/lib/auth";
 import { addSuggestion, listItems } from "@/lib/sheets";
-import { notify } from "@/lib/push";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 300; // Web検索を含むため長めに確保
 
-function isCronRequest(req: NextRequest): boolean {
-  const secret = process.env.CRON_SECRET;
-  if (!secret) return false;
-  return req.headers.get("authorization") === `Bearer ${secret}`;
-}
+// 自動実行(Cron)は廃止。オーナーが画面から実行した時だけ動く。
 
 async function runSuggestion(): Promise<{ title: string; body: string }> {
   const client = new Anthropic();
@@ -83,28 +78,11 @@ async function handle(): Promise<NextResponse> {
     title,
     body,
   });
-  await notify(
-    "💡 今週のAI市場サジェスチョン",
-    "新しい販売提案が届きました。アプリで確認してください。",
-    ["owner", "wife"],
-    "/owner/suggestions"
-  );
+  // 画面を見ているオーナー自身が実行するため通知は送らない
   return NextResponse.json({ ok: true, title });
 }
 
-// Vercel Cron からの週次実行
-export async function GET(req: NextRequest) {
-  if (!isCronRequest(req) && !isAuthed(req)) {
-    return NextResponse.json({ error: "unauthorized" }, { status: 401 });
-  }
-  try {
-    return await handle();
-  } catch (e) {
-    return NextResponse.json({ error: String(e) }, { status: 500 });
-  }
-}
-
-// 画面の「今すぐ実行」ボタンから
+// オーナーが画面の「今すぐ実行」ボタンを押した時のみ動く
 export async function POST(req: NextRequest) {
   if (!isAuthed(req)) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   try {

@@ -1,7 +1,9 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { getRole } from "@/lib/client";
 
 const TABS = [
   {
@@ -24,6 +26,7 @@ const TABS = [
   {
     href: "/owner/suggestions",
     label: "AI提案",
+    ownerOnly: true, // 費用が発生するためオーナーのみ表示
     icon: (
       <path d="M9 18h6M10 21h4M12 3a6 6 0 0 1 4 10.5c-.6.6-1 1.4-1 2.2V16H9v-.3c0-.8-.4-1.6-1-2.2A6 6 0 0 1 12 3z" />
     ),
@@ -32,10 +35,19 @@ const TABS = [
 
 export default function BottomNav() {
   const pathname = usePathname();
+  const [isOwner, setIsOwner] = useState(false);
+
+  // localStorageはクライアントでのみ読めるためマウント後に判定
+  useEffect(() => {
+    setIsOwner(getRole() === "owner");
+  }, []);
+
+  const tabs = TABS.filter((t) => !t.ownerOnly || isOwner);
+
   return (
     <nav className="no-print fixed inset-x-0 bottom-0 z-40 border-t border-zinc-200 bg-white/90 backdrop-blur">
       <div className="mx-auto flex max-w-2xl">
-        {TABS.map((t) => {
+        {tabs.map((t) => {
           const active =
             t.href === "/owner"
               ? pathname === "/owner"

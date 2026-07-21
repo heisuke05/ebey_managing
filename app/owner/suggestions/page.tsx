@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Suggestion } from "@/lib/types";
 import BottomNav from "@/components/BottomNav";
+import { getRole } from "@/lib/client";
 
 export default function SuggestionsPage() {
   const router = useRouter();
@@ -26,6 +27,11 @@ export default function SuggestionsPage() {
     } finally {
       setLoading(false);
     }
+  }, [router]);
+
+  // 費用が発生する機能のためオーナー以外は在庫画面へ戻す
+  useEffect(() => {
+    if (getRole() !== "owner") router.replace("/owner");
   }, [router]);
 
   useEffect(() => {
@@ -68,7 +74,7 @@ export default function SuggestionsPage() {
       </div>
 
       <p className="mt-2 text-sm text-zinc-500">
-        毎週月曜の朝に自動で市場を調査し、おすすめ商品を提案します。
+        「今すぐ実行」を押した時だけ市場を調査します(1回約100円)。自動実行はしません。
       </p>
 
       {message && (

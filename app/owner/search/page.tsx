@@ -319,6 +319,17 @@ export default function SearchPage() {
           </a>
 
           <button
+            onClick={() =>
+              router.push(
+                `/owner/calc?name=${encodeURIComponent(result.keyword)}`
+              )
+            }
+            className="w-full rounded-xl border border-zinc-300 bg-white py-3.5 text-base font-semibold text-zinc-800 active:scale-[0.99]"
+          >
+            この商品で利益計算する
+          </button>
+
+          <button
             onClick={registerFromResult}
             className="w-full rounded-xl border border-zinc-300 bg-white py-3.5 text-base font-semibold text-zinc-800 active:scale-[0.99]"
           >

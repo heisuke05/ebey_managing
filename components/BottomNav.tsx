@@ -24,6 +24,16 @@ const TABS = [
     ),
   },
   {
+    href: "/owner/calc",
+    label: "利益計算",
+    icon: (
+      <>
+        <rect x="5" y="3" width="14" height="18" rx="2" />
+        <path d="M9 7h6M8.5 11h.01M12 11h.01M15.5 11h.01M8.5 14.5h.01M12 14.5h.01M15.5 14.5h.01M8.5 18h3.5" />
+      </>
+    ),
+  },
+  {
     href: "/owner/suggestions",
     label: "AI提案",
     ownerOnly: true, // 費用が発生するためオーナーのみ表示

@@ -1,8 +1,9 @@
 "use client";
 
-import { Suspense, useEffect, useMemo, useState } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import BottomNav from "@/components/BottomNav";
+import BarcodeScanner from "@/components/BarcodeScanner";
 import { WEIGHT_PRESETS, estimateShippingJPY } from "@/lib/shipping";
 
 const input =
@@ -23,13 +24,98 @@ function CalcForm() {
 
   const [rate, setRate] = useState(150);
   const [feeRate, setFeeRate] = useState(0.1435);
-  const [name] = useState(search.get("name") ?? "");
+  const [name, setName] = useState(search.get("name") ?? "");
   const [sellUSD, setSellUSD] = useState(search.get("price") ?? "");
   const [costJPY, setCostJPY] = useState(search.get("cost") ?? "");
   const [grams, setGrams] = useState("");
   const [shipping, setShipping] = useState("");
   const [shippingEdited, setShippingEdited] = useState(false);
   const [showAdvanced, setShowAdvanced] = useState(false);
+
+  const [scanning, setScanning] = useState(false);
+  const [priceLoading, setPriceLoading] = useState(false);
+  const [priceNote, setPriceNote] = useState("");
+  const [priceError, setPriceError] = useState("");
+
+  // バーコードから商品名を解決(無料)
+  const onBarcode = useCallback(async (code: string) => {
+    setScanning(false);
+    setPriceError("");
+    setPriceNote("バーコードから商品名を取得中…");
+    try {
+      const res = await fetch(`/api/barcode?code=${encodeURIComponent(code)}`);
+      const data = await res.json();
+      if (!res.ok) {
+        setPriceNote("");
+        setPriceError(data.error || "商品名が見つかりませんでした。手入力してください。");
+        return;
+      }
+      setName(data.name);
+      setPriceNote("商品名を取得しました。「eBay相場を取得」で価格を自動入力できます。");
+    } catch {
+      setPriceNote("");
+      setPriceError("商品名の取得に失敗しました");
+    }
+  }, []);
+
+  // eBayの平均相場を自動取得(Claude+Web検索・約10円)
+  async function fetchEbayPrice() {
+    if (!name.trim()) {
+      setPriceError("先に商品名を入力またはスキャンしてください");
+      return;
+    }
+    setPriceLoading(true);
+    setPriceError("");
+    setPriceNote("eBayの相場を調べています(10〜20秒)…");
+    try {
+      const res = await fetch("/api/ebay-price", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: name.trim() }),
+      });
+      const raw = await res.text();
+      let data: {
+        found?: boolean;
+        avgUSD?: number;
+        lowUSD?: number | null;
+        highUSD?: number | null;
+        note?: string;
+        error?: string;
+      } = {};
+      try {
+        data = JSON.parse(raw);
+      } catch {
+        setPriceNote("");
+        setPriceError(`サーバーエラー (HTTP ${res.status})。もう一度お試しください。`);
+        return;
+      }
+      if (!res.ok || data.error) {
+        setPriceNote("");
+        setPriceError(data.error || "相場の取得に失敗しました");
+        return;
+      }
+      if (!data.found || data.avgUSD == null) {
+        setPriceNote("");
+        setPriceError(data.note || "相場が見つかりませんでした。手入力してください。");
+        return;
+      }
+      setSellUSD(String(data.avgUSD));
+      const range =
+        data.lowUSD != null && data.highUSD != null
+          ? `(相場帯 $${data.lowUSD}〜$${data.highUSD})`
+          : "";
+      setPriceNote(
+        `eBay平均 $${data.avgUSD} を入力しました ${range}${
+          data.note ? ` ／ ${data.note}` : ""
+        }`
+      );
+    } catch {
+      setPriceNote("");
+      setPriceError("相場の取得に失敗しました。電波状況をご確認ください。");
+    } finally {
+      setPriceLoading(false);
+    }
+  }
 
   useEffect(() => {
     fetch("/api/rate").then(async (r) => {
@@ -56,8 +142,10 @@ function CalcForm() {
     const sell = parseFloat(sellUSD) || 0;
     const cost = parseFloat(costJPY) || 0;
     const ship = parseFloat(shipping) || 0;
+    const hasInput = sell > 0;
     const revenueJPY = sell * rate;
-    const feeJPY = revenueJPY * feeRate + 0.3 * rate; // 手数料率 + $0.30固定
+    // 売却額が未入力なら手数料も0にして、空フォームで見かけの赤字が出ないようにする
+    const feeJPY = hasInput ? revenueJPY * feeRate + 0.3 * rate : 0;
     const profit = revenueJPY - feeJPY - ship - cost;
     const margin = revenueJPY > 0 ? profit / revenueJPY : 0;
     return {
@@ -67,7 +155,7 @@ function CalcForm() {
       costJPY: Math.round(cost),
       profit: Math.round(profit),
       margin,
-      hasInput: sell > 0,
+      hasInput,
     };
   }, [sellUSD, costJPY, shipping, rate, feeRate]);
 
@@ -75,10 +163,33 @@ function CalcForm() {
 
   return (
     <main className="mx-auto max-w-md px-4 pb-28 pt-6">
+      {scanning && (
+        <BarcodeScanner onDetect={onBarcode} onClose={() => setScanning(false)} />
+      )}
+
       <h1 className="text-xl font-semibold tracking-tight text-zinc-900">
         利益計算(店舗調査用)
       </h1>
-      {name && <p className="mt-1 truncate text-sm text-zinc-500">{name}</p>}
+
+      {/* 商品名 + スキャン(相場の自動取得に使用) */}
+      <div className="mt-4">
+        <span className={label}>商品名(相場の自動取得に使用)</span>
+        <div className="mt-1.5 flex gap-2">
+          <input
+            className={input}
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="商品名 または スキャン"
+          />
+          <button
+            type="button"
+            onClick={() => setScanning(true)}
+            className="shrink-0 rounded-xl border border-zinc-300 bg-white px-4 text-sm font-semibold text-zinc-800 active:scale-[0.97]"
+          >
+            スキャン
+          </button>
+        </div>
+      </div>
 
       {/* 結果(常に上部に表示) */}
       <div className="mt-4 rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm">
@@ -126,6 +237,24 @@ function CalcForm() {
               placeholder="80"
             />
           </div>
+          <button
+            type="button"
+            onClick={fetchEbayPrice}
+            disabled={priceLoading}
+            className="mt-2 w-full rounded-xl bg-zinc-900 py-3 text-sm font-semibold text-white active:scale-[0.99] disabled:opacity-40"
+          >
+            {priceLoading ? "eBay相場を取得中…" : "eBay相場を自動取得(約10円)"}
+          </button>
+          {priceNote && (
+            <p className="mt-2 rounded-xl bg-emerald-50 px-3.5 py-2.5 text-xs text-emerald-700">
+              {priceNote}
+            </p>
+          )}
+          {priceError && (
+            <p className="mt-2 rounded-xl bg-red-50 px-3.5 py-2.5 text-xs text-red-600">
+              {priceError}
+            </p>
+          )}
         </div>
 
         <div>

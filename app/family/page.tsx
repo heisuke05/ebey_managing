@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Item } from "@/lib/types";
 import { getName, uploadPhoto } from "@/lib/client";
+import BottomNav from "@/components/BottomNav";
 
 export default function FamilyPage() {
   const router = useRouter();
@@ -91,7 +92,7 @@ export default function FamilyPage() {
   }
 
   return (
-    <main className="mx-auto max-w-md px-4 pb-16 pt-6">
+    <main className="mx-auto max-w-md px-4 pb-28 pt-6">
       <input
         ref={fileRef}
         type="file"
@@ -215,6 +216,8 @@ export default function FamilyPage() {
           </button>
         ))}
       </div>
+
+      <BottomNav />
     </main>
   );
 }

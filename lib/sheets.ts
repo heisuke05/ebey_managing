@@ -8,6 +8,7 @@ const SUBS_TAB = "通知登録";
 const AI_TAB = "AI提案";
 const LOG_TAB = "作業ログ";
 const SETTINGS_TAB = "設定";
+const SOURCING_TAB = "仕入れリサーチ";
 
 const ITEM_HEADERS = [
   "id",
@@ -65,6 +66,7 @@ export async function ensureSetup(): Promise<void> {
     [AI_TAB, ["日付", "タイトル", "内容"]],
     [LOG_TAB, ["日時", "担当", "商品ID", "商品名", "操作"]],
     [SETTINGS_TAB, ["キー", "値"]],
+    [SOURCING_TAB, ["日付", "結果JSON"]],
   ];
   const missing = wanted.filter(([name]) => !existing.has(name));
 
@@ -349,6 +351,58 @@ export async function listSuggestions(): Promise<Suggestion[]> {
     .filter((r) => r[0])
     .map((r) => ({ date: r[0], title: r[1] ?? "", body: r[2] ?? "" }))
     .reverse();
+}
+
+// ---- 仕入れリサーチ ----
+
+export interface SourcingRun {
+  date: string;
+  json: string; // 結果(SourcingResult)のJSON文字列
+}
+
+/** 仕入れリサーチのタブが無ければ作成する */
+export async function ensureSourcingTab(): Promise<void> {
+  const api = client();
+  const meta = await api.spreadsheets.get({ spreadsheetId: SHEET_ID });
+  const exists = (meta.data.sheets ?? []).some(
+    (s) => s.properties?.title === SOURCING_TAB
+  );
+  if (exists) return;
+  await api.spreadsheets.batchUpdate({
+    spreadsheetId: SHEET_ID,
+    requestBody: {
+      requests: [{ addSheet: { properties: { title: SOURCING_TAB } } }],
+    },
+  });
+  await api.spreadsheets.values.update({
+    spreadsheetId: SHEET_ID,
+    range: `${SOURCING_TAB}!A1`,
+    valueInputOption: "RAW",
+    requestBody: { values: [["日付", "結果JSON"]] },
+  });
+}
+
+export async function addSourcing(json: string): Promise<void> {
+  await ensureSourcingTab();
+  await client().spreadsheets.values.append({
+    spreadsheetId: SHEET_ID,
+    range: `${SOURCING_TAB}!A1`,
+    valueInputOption: "RAW",
+    requestBody: { values: [[new Date().toISOString(), json]] },
+  });
+}
+
+export async function listSourcing(): Promise<SourcingRun[]> {
+  try {
+    const rows = await readTab(SOURCING_TAB);
+    return rows
+      .slice(1)
+      .filter((r) => r[0])
+      .map((r) => ({ date: r[0], json: r[1] ?? "" }))
+      .reverse();
+  } catch {
+    return [];
+  }
 }
 
 // ---- 作業ログ ----

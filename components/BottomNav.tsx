@@ -36,9 +36,16 @@ const ICON_CALC = (
 const ICON_AI = (
   <path d="M9 18h6M10 21h4M12 3a6 6 0 0 1 4 10.5c-.6.6-1 1.4-1 2.2V16H9v-.3c0-.8-.4-1.6-1-2.2A6 6 0 0 1 12 3z" />
 );
+const ICON_SOURCING = (
+  <>
+    <path d="M6 2L3 6v14a1 1 0 0 0 1 1h16a1 1 0 0 0 1-1V6l-3-4z" />
+    <path d="M3 6h18M16 10a4 4 0 0 1-8 0" />
+  </>
+);
 
 const SEARCH_TAB: Tab = { href: "/owner/search", label: "商品検索", icon: ICON_SEARCH };
 const CALC_TAB: Tab = { href: "/owner/calc", label: "利益計算", icon: ICON_CALC };
+const SOURCING_TAB: Tab = { href: "/owner/sourcing", label: "仕入れ", icon: ICON_SOURCING };
 const AI_TAB: Tab = { href: "/owner/suggestions", label: "AI提案", icon: ICON_AI };
 
 function tabsForRole(role: Role | null): Tab[] {
@@ -49,8 +56,8 @@ function tabsForRole(role: Role | null): Tab[] {
     : { href: "/owner", label: "在庫", icon: ICON_STOCK };
   // 市場調査(商品検索・利益計算)は全員が使える
   const tabs = [home, SEARCH_TAB, CALC_TAB];
-  // AI提案は費用が発生するためオーナーのみ
-  if (role === "owner") tabs.push(AI_TAB);
+  // 仕入れリサーチ・AI提案は費用が発生するためオーナーのみ
+  if (role === "owner") tabs.push(SOURCING_TAB, AI_TAB);
   return tabs;
 }
 
